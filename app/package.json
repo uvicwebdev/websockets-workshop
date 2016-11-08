@@ -3,5 +3,9 @@
   "version": "0.0.1",
   "description": "A chat room!",
   "author": "Erik Reppel erikreppel@gmail.com",
-  "dependencies": {}
+  "dependencies": {
+    "express": "^4.14.0",
+    "request": "^2.78.0",
+    "socketio": "^1.0.0"
+  }
 }
