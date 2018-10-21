@@ -17,10 +17,10 @@ var io = socketio(http_server);
 // Track users currently on the site
 var activeUsers = [];
 
-var es = 'http://localhost:9200'
+var elasticSearch = 'http://localhost:9200'
 
 io.on('connection', function(socket) {
-	var msgDumpQuery = es + '/talkytalk/messages/_search?q=*&sort=timestamp:desc&size=100';
+	var msgDumpQuery = elasticSearch + '/talkytalk/messages/_search?q=*&sort=timestamp:desc&size=100';
 	request(msgDumpQuery, function(error, response, body) {
 		if (!error && response.statusCode == 200) {
 			var respJson = JSON.parse(body);
@@ -58,7 +58,7 @@ io.on('connection', function(socket) {
 
 	// respond to users search queries
 	socket.on('searchRequest', function(search) {
-		var query = es + '/talkytalk/messages/_search?q=' + search.q + '&size=10';
+		var query = elasticSearch + '/talkytalk/messages/_search?q=' + search.q + '&size=10';
 		request(query, function(error, response, body) {
 			if (!error && response.statusCode == 200) {
 				var respJson = JSON.parse(body);
@@ -86,10 +86,10 @@ io.on('connection', function(socket) {
 	});
 }); // end of socketio
 
-// helper function for indexing messages into ES
+// helper function for indexing messages into elasticSearch
 function indexMessage(message) {
 	request({
-		url: es + '/talkytalk/messages/',
+		url: elasticSearch + '/talkytalk/messages/',
 		qs: {
 			from: 'chat client',
 			time: new Date()

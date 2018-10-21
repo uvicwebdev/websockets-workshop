@@ -3,17 +3,18 @@ var socket = io.connect(window.location.href); // io is imported in index.html
 // handle username
 var username = getCookie("username");
 if (!username) {
-	var tempUsername = "anon" + Math.floor((Math.random() * 1000) + 1);
+	var tempUsername = "anonymous" + Math.floor((Math.random() * 1000) + 1);
 	username = prompt("Please enter a user name!", tempUsername);
 	setCookie('username', username, 7);
 	socket.emit('newUser', {
 		'user': username
 	});
 }
-if (username)
+if (username) {
 	socket.emit('newUser', {
 		'user': username
 	});
+}
 
 // Handles receiving a history of the conversation
 socket.on('msgHistory', function(data) {
@@ -41,7 +42,6 @@ $('#messageForm').keypress(function() {
 // Send search queries
 $('#searchBar').keypress(function() {
 	//this piece allows us to submit when a user hit enter
-	var keyCode = (event.keyCode ? event.keyCode : event.which);
 	if ((event.keyCode || event.which) == 13) {
 		sendSearch();
 	}
@@ -77,6 +77,7 @@ function displayUsers(users) {
 
 // Helper function for displaying message
 function displayMessage(message) {
+	// find element with ID "messages" (which we know is a <ul> elem) and append to it a <li> elem
 	$('#messages').append(
 		'<li>' + message.user + ': ' + message.text + '</li>'
 	);
