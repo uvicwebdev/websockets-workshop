@@ -1,20 +1,34 @@
-// Import app dependancies
-var express = require('express'); // framework we will use for the webapp
-var socketio = require('socket.io'); // framework we will use to handle websockets
-var http = require('http'); // needed to server our webapp
-var request = require('request'); // library that makes http requests easier
+// Import dependencies
+// ===================
+// framework we will use for the webapp
+var express = require('express');
+
+// framework we will use to handle websockets
+var socketio = require('socket.io');
+
+// needed to server our webapp
+// created separately so we can use it for both (1) HTTP server and (2) Web Sockets server
+var http = require('http');
+
+// library that makes it easier to send HTTP requests and receive responses
+var request = require('request');
+
+// ===================
 
 // initialize express
 var app = express();
-app.use(express.static('public')); // make files in /public available
 
-// serves our app
+// make files in /public available
+app.use(express.static('public'));
+
 var http_server = http.Server(app);
 
 // create new instance of socketio using the http server
 var io = socketio(http_server);
 
 // Track users currently on the site
+// (In real-world apps, we would NOT use a variable on the server like this.)
+// (We would use a DB or cache to maintain state e.g. active users.)
 var activeUsers = [];
 
 var elasticSearch = 'http://localhost:9200'

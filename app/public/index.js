@@ -1,4 +1,5 @@
-var socket = io.connect(window.location.href); // io is imported in index.html
+// io is imported in index.html
+var socket = io.connect(window.location.href);
 
 // handle username
 var username = getCookie("username");
