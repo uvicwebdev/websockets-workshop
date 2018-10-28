@@ -10,9 +10,6 @@ var socketio = require('socket.io');
 // created separately so we can use it for both (1) HTTP server and (2) Web Sockets server
 var http = require('http');
 
-// library that makes it easier to send HTTP requests and receive responses
-var request = require('request');
-
 // ===================
 
 // initialize express
@@ -31,39 +28,31 @@ var io = socketio(http_server);
 // (We would use a DB or cache to maintain state e.g. active users.)
 var activeUsers = [];
 
-var elasticSearch = 'http://localhost:9200'
-
 io.on('connection', function(socket) {
-	var msgDumpQuery = elasticSearch + '/talkytalk/messages/_search?q=*&sort=timestamp:desc&size=100';
-	request(msgDumpQuery, function(error, response, body) {
-		if (!error && response.statusCode == 200) {
-			var respJson = JSON.parse(body);
-			var requestResults = respJson.hits.hits;
-			var msgHistory = [];
-			for (var i = 0; i < requestResults.length; i++) {
-				msgHistory.push(requestResults[i]._source);
-			}
-			socket.emit('msgHistory', {
-				'messages': msgHistory
-			});
-		} else {
-			console.log(error, response);
-		}
-	});
+	console.log("Client connected!");
+
+	// TODO: query DB to get message history
+	msgHistory = {
+		'messages': []
+	}
+	socket.emit('msgHistory', msgHistory)
 
 	// when we receive a message send it to everyone else in the room
-	// and index into Elasticsearch
+	// TODO: store it in DB for persistent storage
 	socket.on('sendMessage', function(message) {
+		console.log("New msg from " + message.user + ": " + message.text);
 		io.emit('messageReceived', message);
-		indexMessage(message);
 	});
 
 	// when a new user connects, we need to add them to activeUsers
 	// and tell everyone to update their user view
 	socket.on('newUser', function(msg) {
+		console.log("New user: " + msg.user);
 		var index = activeUsers.indexOf(msg.user);
 		if (index == -1) {
 			activeUsers.push(msg.user);
+
+			// inform clients of new user by sending list of all active users
 			io.emit('updateUsers', {
 				'users': activeUsers
 			});
@@ -72,55 +61,35 @@ io.on('connection', function(socket) {
 
 	// respond to users search queries
 	socket.on('searchRequest', function(search) {
-		var query = elasticSearch + '/talkytalk/messages/_search?q=' + search.q + '&size=10';
-		request(query, function(error, response, body) {
-			if (!error && response.statusCode == 200) {
-				var respJson = JSON.parse(body);
-				var requestResults = respJson.hits.hits;
-				var searchResults = [];
-				for (var i = 0; i < requestResults.length; i++)
-					searchResults.push(requestResults[i]._source);
-				socket.emit('searchResults', {
-					'results': searchResults
-				});
-			}
-		});
+		console.log("Received search request: " + search.query);
+
+		// TODO: query DB to get actual search results
+		results = {
+			'results': ["I got nothing!"]
+		}
+		socket.emit('searchResults', results)
 	});
 
 	// have to update activeUsers and clients user lists
 	socket.on('userLeaving', function(msg) {
+		console.log("User leaving: " + msg.user);
+
 		// logic for removing the user from the array of active users
 		var index = activeUsers.indexOf(msg.user);
-		if (index > -1)
+		if (index > -1) {
 			activeUsers.splice(index, 1);
-		// emit the new list of users to all
+		}
+
+		// inform clients of leaving user by sending list of all active users
 		io.emit('updateUsers', {
 			'users': activeUsers
 		});
 	});
-}); // end of socketio
-
-// helper function for indexing messages into elasticSearch
-function indexMessage(message) {
-	request({
-		url: elasticSearch + '/talkytalk/messages/',
-		qs: {
-			from: 'chat client',
-			time: new Date()
-		}, //Query string data
-		method: 'POST',
-		//Lets post the following key/values as form
-		json: message
-	}, function(error, response, body) {
-		if (error) {
-			console.log(error);
-		}
-		console.log(response.statusCode, body);
-	});
-}
+});
 
 // respond with index.html when a user performs a get request at '/'
 app.get('/', function(req, res) {
+	console.log("Received HTTP GET request for index resource ('http://<domain>/')")
 	res.sendFile(__dirname + '/index.html');
 });
 

@@ -91,6 +91,12 @@ On both the server and the client, we listen for and respond to *events* emitted
 
 
 ### Patterns of Data Exchange
+All throughout, we use JSON objects to format and package our data. JSON:
+* is a standard, generic data structure
+* is really flexible
+	* it can contain an arbitary amount of fields of arbitrary types (e.g. string, list, int, other JSON objects)
+* literally means JavaScript Object Notation
+
 **Messages**: between senders and receivers
 * e.g. HTTP Requests between client and server
 
