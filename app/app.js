@@ -10,6 +10,8 @@ var socketio = require('socket.io');
 // created separately so we can use it for both (1) HTTP server and (2) Web Sockets server
 var http = require('http');
 
+const elasticSearchClient = require('./elasticSearchClient.js')
+
 // ===================
 
 // initialize express
@@ -28,14 +30,32 @@ var io = socketio(http_server);
 // (We would use a DB or cache to maintain state e.g. active users.)
 var activeUsers = [];
 
+// ====================
+// the arg 'callback' is a function that defines what to do with the messages
+function getMessages(callback) {
+	// check health of DB, which involves making an HTTP request
+	// upon the completion of the request, execute the given function (which
+	// takes as argument a boolean indicating the health of the DB)
+	elasticSearchClient.isHealthy(
+		function(isHealthy) {
+			if (isHealthy === false) {
+				// TODO: handle this prob e.g. inform client of error
+				console.log("DB is down :^(")
+			}
+			callback(elasticSearchClient.getMessages())
+		}
+	)
+}
+
 io.on('connection', function(socket) {
 	console.log("Client connected!");
-
-	// TODO: query DB to get message history
-	msgHistory = {
-		'messages': []
-	}
-	socket.emit('msgHistory', msgHistory)
+	// get messages; then, execute the provided function, which sends them to the client
+	getMessages(function(messages) {
+		msgHistory = {
+			'messages': messages
+		}
+		socket.emit('msgHistory', msgHistory)
+	})
 
 	// when we receive a message send it to everyone else in the room
 	// TODO: store it in DB for persistent storage

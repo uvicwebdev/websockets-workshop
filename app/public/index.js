@@ -12,7 +12,7 @@ socket.on('msgHistory', function(data) {
 		console.log(messages[i]);
 		displayMessage(messages[i]);
 	}
-	console.log("Message history after parsing: " + messages);
+	console.log("Message history after receiving event: " + messages);
 });
 
 console.log("Message history: " + messages);
