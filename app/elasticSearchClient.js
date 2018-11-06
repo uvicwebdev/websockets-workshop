@@ -16,6 +16,8 @@ exports.isHealthy = function(callback) {
         if (!err && resp.statusCode == 200) {
             console.log("Got HTTP 200!")
             callback(true)
+            return
+
         } else if (err) {
             console.log("ERR: " + err)
         }
@@ -39,6 +41,28 @@ exports.getMessages = function() {
         }
     ]
 }
+
+exports.createMessagesIndex = function(success) {
+    let url = elasticSearch + "/messages?pretty"
+    request.put(
+        {
+            method: "PUT",
+            uri: url
+        },
+        function(err, resp, body) {
+        if (err) {
+            console.log("ERR: Failed to create '/messages' index: " + err)
+            success(false)
+            return
+        }
+
+        console.log("Tried to create '/messages' index, got resp code: " + resp.statusCode)
+        if (resp.statusCode == 200) {
+            success(true)
+        }
+    })
+}
+
 /*exports.getMessages = function() {
     // retrieve 100 most recent messages
 	var msgDumpQuery = elasticSearch + '/talkytalk/messages/_search?q=*&sort=timestamp:desc&size=100';

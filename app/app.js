@@ -47,8 +47,17 @@ function getMessages(callback) {
 	)
 }
 
+function setUpDb() {
+	elasticSearchClient.createMessagesIndex(function(success) {
+		console.log("Created messages index: " + success)
+	})
+}
+
 io.on('connection', function(socket) {
 	console.log("Client connected!");
+
+	setUpDb()
+
 	// get messages; then, execute the provided function, which sends them to the client
 	getMessages(function(messages) {
 		msgHistory = {
