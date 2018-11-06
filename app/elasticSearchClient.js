@@ -13,14 +13,13 @@ exports.isHealthy = function(callback) {
     // TODO handle response from DB
     let url = elasticSearch + "/_cat/health?v"
     request(url, function(err, resp, body) {
-        if (err) {
+        if (!err && resp.statusCode == 200) {
+            console.log("Got HTTP 200!")
+            callback(true)
+        } else if (err) {
             console.log("ERR: " + err)
         }
-
-        if (resp.statusCode == 200) {
-            console.log("Got HTTP 200!")
-        }
-        callback()
+        callback(false)
     });
 }
 
