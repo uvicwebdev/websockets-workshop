@@ -25,21 +25,27 @@ exports.isHealthy = function(callback) {
     });
 }
 
-exports.getMessages = function() {
-    return [
-        {
-            "user": "Bob",
-            "text": "That's great"
-        },
-        {
-            "user": "Alice",
-            "text": "Yeah wow"
-        },
-        {
-            "user": "Charlie",
-            "text": "Also I am impressed"
+// the provided callback should be called with the fetched list of messages
+exports.getMessages = function(callback) {
+    let url = elasticSearch + "/messages/_search?q=*"
+    request(url, function(err, resp, body) {
+        if (err || resp.statusCode != 200) {
+            console.log("ERR: Could not get messages: " + err)
+            // could not find messages, so invoke callback with an empty list
+            callback([])
         }
-    ]
+
+        console.log("Got messages: \n" + body)
+        var respJson = JSON.parse(body);
+
+        let messages = []
+        for (let i = 0; i < respJson.hits.hits.length; i++) {
+            messages.push(respJson.hits.hits[i]._source)
+        }
+
+        // provide messages to callback
+        callback(messages)
+    })
 }
 
 exports.createMessagesIndex = function(success) {

@@ -108,7 +108,7 @@ function getMessages(callback) {
 				// TODO: handle this prob e.g. inform client of error
 				console.log("DB is down :^(")
 			}
-			callback(elasticSearchClient.getMessages())
+			elasticSearchClient.getMessages(callback)
 		}
 	)
 }
