@@ -30,33 +30,13 @@ var io = socketio(http_server);
 // (We would use a DB or cache to maintain state e.g. active users.)
 var activeUsers = [];
 
-// ====================
-// the arg 'callback' is a function that defines what to do with the messages
-function getMessages(callback) {
-	// check health of DB, which involves making an HTTP request
-	// upon the completion of the request, execute the given function (which
-	// takes as argument a boolean indicating the health of the DB)
-	elasticSearchClient.isHealthy(
-		function(isHealthy) {
-			if (isHealthy === false) {
-				// TODO: handle this prob e.g. inform client of error
-				console.log("DB is down :^(")
-			}
-			callback(elasticSearchClient.getMessages())
-		}
-	)
-}
-
-function setUpDb() {
-	elasticSearchClient.createMessagesIndex(function(success) {
-		console.log("Created messages index: " + success)
-	})
-}
+// set up DB
+elasticSearchClient.createMessagesIndex(function(success) {
+	console.log("Created messages index: " + success)
+})
 
 io.on('connection', function(socket) {
 	console.log("Client connected!");
-
-	setUpDb()
 
 	// get messages; then, execute the provided function, which sends them to the client
 	getMessages(function(messages) {
@@ -116,6 +96,24 @@ io.on('connection', function(socket) {
 	});
 });
 
+// ====================
+// the arg 'callback' is a function that defines what to do with the messages
+function getMessages(callback) {
+	// check health of DB, which involves making an HTTP request
+	// upon the completion of the request, execute the given function (which
+	// takes as argument a boolean indicating the health of the DB)
+	elasticSearchClient.isHealthy(
+		function(isHealthy) {
+			if (isHealthy === false) {
+				// TODO: handle this prob e.g. inform client of error
+				console.log("DB is down :^(")
+			}
+			callback(elasticSearchClient.getMessages())
+		}
+	)
+}
+
+// =====================
 // respond with index.html when a user performs a get request at '/'
 app.get('/', function(req, res) {
 	console.log("Received HTTP GET request for index resource ('http://<domain>/')")
