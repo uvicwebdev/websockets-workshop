@@ -51,6 +51,9 @@ io.on('connection', function(socket) {
 	socket.on('sendMessage', function(message) {
 		console.log("New msg from " + message.user + ": " + message.text);
 		io.emit('messageReceived', message);
+		elasticSearchClient.saveMessage(message, function(success) {
+			console.log("Index message with success="+success)
+		})
 	});
 
 	// when a new user connects, we need to add them to activeUsers

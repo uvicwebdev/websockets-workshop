@@ -25,6 +25,27 @@ exports.isHealthy = function(callback) {
     });
 }
 
+exports.saveMessage = function(msg, success) {
+    let url = elasticSearch + "/messages/_doc"
+    request({
+            url: url,
+            method: 'POST',
+            json: msg
+        }, function(err, resp, body) {
+        if (err) {
+            console.log("ERR: Failed index message " + msg + " with error: " + err)
+            success(false)
+            return
+        }
+
+        console.log("Tried index a message, got resp code: " + resp.statusCode)
+        console.log("resp: " + resp.body)
+        if (resp.statusCode == 200) {
+            success(true)
+        }
+    })
+}
+
 // the provided callback should be called with the fetched list of messages
 exports.getMessages = function(callback) {
     let url = elasticSearch + "/messages/_search?q=*"
@@ -50,7 +71,7 @@ exports.getMessages = function(callback) {
 
 exports.createMessagesIndex = function(success) {
     let url = elasticSearch + "/messages?pretty"
-    request.put(
+    request(
         {
             method: "PUT",
             uri: url
