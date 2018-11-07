@@ -47,7 +47,7 @@ exports.saveMessage = function(msg, success) {
 
 // the provided callback should be called with the fetched list of messages
 exports.getMessages = function(callback) {
-    let url = elasticSearch + "/messages/_search?q=*"
+    let url = elasticSearch + "/messages/_search?q=*&sort=timestamp:desc"
     request(url, function(err, resp, body) {
         if (err || resp.statusCode != 200) {
             console.log("ERR: Could not get messages: " + err)
