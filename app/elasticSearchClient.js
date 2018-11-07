@@ -10,7 +10,6 @@ const request = require('request')
 let elasticSearch = "http://localhost:9200"
 
 exports.isHealthy = function(callback) {
-    // TODO handle response from DB
     let url = elasticSearch + "/_cat/health?v"
     request(url, function(err, resp, body) {
         if (!err && resp.statusCode == 200) {
@@ -69,6 +68,27 @@ exports.getMessages = function(callback) {
     })
 }
 
+exports.searchMessages = function(query, processResults) {
+    var url = elasticSearch + '/messages/_search?q=' + query + '&size=10'
+    request(url, function(error, response, body) {
+        if (error) {
+            console.log("ERR: Failed to search for '" + query + "'. -- " + error)
+            processResults([])
+        }
+        console.log("Searching for '" + query + "', got resp code: " + response.statusCode)
+        if (!error && response.statusCode == 200) {
+            console.log("Results: " + body)
+            var respJson = JSON.parse(body);
+            var requestResults = respJson.hits.hits;
+            var searchResults = [];
+            for (var i = 0; i < requestResults.length; i++) {
+                searchResults.push(requestResults[i]._source);
+            }
+            processResults(searchResults)
+        }
+    })
+}
+
 exports.createMessagesIndex = function(success) {
     let url = elasticSearch + "/messages?pretty"
     request(
@@ -89,26 +109,3 @@ exports.createMessagesIndex = function(success) {
         }
     })
 }
-
-/*exports.getMessages = function() {
-    // retrieve 100 most recent messages
-	var msgDumpQuery = elasticSearch + '/talkytalk/messages/_search?q=*&sort=timestamp:desc&size=100';
-	request(msgDumpQuery, function(error, response, body) {
-		if (!error && response.statusCode == 200) {
-			var respJson = JSON.parse(body);
-			var requestResults = respJson.hits.hits;
-			var msgHistory = [];
-			for (var i = 0; i < requestResults.length; i++) {
-				msgHistory.push(requestResults[i]._source);
-            }
-
-            // TODO remove this in favour of a callback
-			socket.emit('msgHistory', {
-				'messages': msgHistory
-			});
-		} else {
-			console.log(error, response);
-		}
-	});
-}
-*/

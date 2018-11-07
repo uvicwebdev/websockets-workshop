@@ -74,12 +74,11 @@ io.on('connection', function(socket) {
 	// respond to users search queries
 	socket.on('searchRequest', function(search) {
 		console.log("Received search request: " + search.query);
-
-		// TODO: query DB to get actual search results
-		results = {
-			'results': ["I got nothing!"]
-		}
-		socket.emit('searchResults', results)
+		elasticSearchClient.searchMessages(search.query, function(results) {
+			socket.emit('searchResults', {
+				'results': results
+			})
+		})
 	});
 
 	// have to update activeUsers and clients user lists

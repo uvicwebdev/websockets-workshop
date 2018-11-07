@@ -106,6 +106,11 @@ function displayMessage(message) {
 
 function displaySearchResults(results) {
 	$('#searchResults').empty();
+	if (results.length === 0) {
+		$('#searchResults').append(
+			'<p><em>None.</em></p>'
+		);
+	}
 	for (var i = 0; i < results.length; i++) {
 		$('#searchResults').append(
 			'<p>' + results[i].user + ': ' + results[i].text + '</p>'
