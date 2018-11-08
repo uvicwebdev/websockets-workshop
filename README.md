@@ -7,7 +7,7 @@ A chat room with message searching!
 
 Requirements
 ---
-#### Server
+### Server
 Node is a JavaScript interpreter and we need it to run our JavaScript server. Download it [here](https://nodejs.org/en/download/).
 
 ### Database
