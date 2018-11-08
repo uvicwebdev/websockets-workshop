@@ -1,55 +1,70 @@
-// Import app dependancies
-var express = require('express'); // framework we will use for the webapp
-var socketio = require('socket.io'); // framework we will use to handle websockets
-var http = require('http'); // needed to server our webapp
-var request = require('request'); // library that makes http requests easier
+// Import dependencies
+// ===================
+// framework we will use for the webapp
+var express = require('express');
+
+// framework we will use to handle websockets
+var socketio = require('socket.io');
+
+// needed to server our webapp
+// created separately so we can use it for both (1) HTTP server and (2) Web Sockets server
+var http = require('http');
+
+const elasticSearchClient = require('./elasticSearchClient.js')
+
+// ===================
 
 // initialize express
 var app = express();
-app.use(express.static('public')); // make files in /public available
 
-// serves our app
+// make files in /public available
+app.use(express.static('public'));
+
 var http_server = http.Server(app);
 
 // create new instance of socketio using the http server
 var io = socketio(http_server);
 
 // Track users currently on the site
+// (In real-world apps, we would NOT use a variable on the server like this.)
+// (We would use a DB or cache to maintain state e.g. active users.)
 var activeUsers = [];
 
-var es = 'http://localhost:9200'
+// set up DB
+elasticSearchClient.createMessagesIndex(function(success) {
+	console.log("Created messages index: " + success)
+})
 
 io.on('connection', function(socket) {
-	var msgDumpQuery = es + '/talkytalk/messages/_search?q=*&sort=timestamp:desc&size=100';
-	request(msgDumpQuery, function(error, response, body) {
-		if (!error && response.statusCode == 200) {
-			var respJson = JSON.parse(body);
-			var requestResults = respJson.hits.hits;
-			var msgHistory = [];
-			for (var i = 0; i < requestResults.length; i++) {
-				msgHistory.push(requestResults[i]._source);
-			}
-			socket.emit('msgHistory', {
-				'messages': msgHistory
-			});
-		} else {
-			console.log(error, response);
+	console.log("Client connected!");
+
+	// get messages; then, execute the provided function, which sends them to the client
+	getMessages(function(messages) {
+		msgHistory = {
+			'messages': messages
 		}
-	});
+		socket.emit('msgHistory', msgHistory)
+	})
 
 	// when we receive a message send it to everyone else in the room
-	// and index into Elasticsearch
+	// TODO: store it in DB for persistent storage
 	socket.on('sendMessage', function(message) {
+		console.log("New msg from " + message.user + ": " + message.text);
 		io.emit('messageReceived', message);
-		indexMessage(message);
+		elasticSearchClient.saveMessage(message, function(success) {
+			console.log("Index message with success="+success)
+		})
 	});
 
 	// when a new user connects, we need to add them to activeUsers
 	// and tell everyone to update their user view
 	socket.on('newUser', function(msg) {
+		console.log("New user: " + msg.user);
 		var index = activeUsers.indexOf(msg.user);
 		if (index == -1) {
 			activeUsers.push(msg.user);
+
+			// inform clients of new user by sending list of all active users
 			io.emit('updateUsers', {
 				'users': activeUsers
 			});
@@ -58,55 +73,52 @@ io.on('connection', function(socket) {
 
 	// respond to users search queries
 	socket.on('searchRequest', function(search) {
-		var query = es + '/talkytalk/messages/_search?q=' + search.q + '&size=10';
-		request(query, function(error, response, body) {
-			if (!error && response.statusCode == 200) {
-				var respJson = JSON.parse(body);
-				var requestResults = respJson.hits.hits;
-				var searchResults = [];
-				for (var i = 0; i < requestResults.length; i++)
-					searchResults.push(requestResults[i]._source);
-				socket.emit('searchResults', {
-					'results': searchResults
-				});
-			}
-		});
+		console.log("Received search request: " + search.query);
+		elasticSearchClient.searchMessages(search.query, function(results) {
+			socket.emit('searchResults', {
+				'results': results
+			})
+		})
 	});
 
 	// have to update activeUsers and clients user lists
 	socket.on('userLeaving', function(msg) {
+		console.log("User leaving: " + msg.user);
+
 		// logic for removing the user from the array of active users
 		var index = activeUsers.indexOf(msg.user);
-		if (index > -1)
+		if (index > -1) {
 			activeUsers.splice(index, 1);
-		// emit the new list of users to all
+		}
+
+		// inform clients of leaving user by sending list of all active users
 		io.emit('updateUsers', {
 			'users': activeUsers
 		});
 	});
-}); // end of socketio
+});
 
-// helper function for indexing messages into ES
-function indexMessage(message) {
-	request({
-		url: es + '/talkytalk/messages/',
-		qs: {
-			from: 'chat client',
-			time: new Date()
-		}, //Query string data
-		method: 'POST',
-		//Lets post the following key/values as form
-		json: message
-	}, function(error, response, body) {
-		if (error) {
-			console.log(error);
+// ====================
+// the arg 'callback' is a function that defines what to do with the messages
+function getMessages(callback) {
+	// check health of DB, which involves making an HTTP request
+	// upon the completion of the request, execute the given function (which
+	// takes as argument a boolean indicating the health of the DB)
+	elasticSearchClient.isHealthy(
+		function(isHealthy) {
+			if (isHealthy === false) {
+				// TODO: handle this prob e.g. inform client of error
+				console.log("DB is down :^(")
+			}
+			elasticSearchClient.getMessages(callback)
 		}
-		console.log(response.statusCode, body);
-	});
+	)
 }
 
+// =====================
 // respond with index.html when a user performs a get request at '/'
 app.get('/', function(req, res) {
+	console.log("Received HTTP GET request for index resource ('http://<domain>/')")
 	res.sendFile(__dirname + '/index.html');
 });
 
